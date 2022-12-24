@@ -35,9 +35,6 @@ class ExampleAlgorithm(Algorithm):
 
         domains = {var: [word for word in words] for var in variables}
         solution = []
-        print(tiles, end="\n------------------------\n")
-        print(variables, end="\n------------------------\n")
-        print(domains, end="\n------------------------\n")
         for move in moves_list:
             solution.append([move[0], move[1], domains])
 
@@ -51,15 +48,7 @@ def update_domains(domains, variables):
 
 
 def is_consistent_assignment(field, word, matrix):
-    # print(field)
-    # for i in range(len(matrix)):
-    #     for j in range(len(matrix[0])):
-    #         print(matrix[i][j], end=", ")
-    #     print()
-
-    # print(word)
     for idx, letter in enumerate(word):
-        # print(idx, end=",")
         if field.orientation == 'h':
             if matrix[field.x][field.y + idx] != 0 and matrix[field.x][field.y + idx] != letter:
                 return False
@@ -110,7 +99,8 @@ def backtrack_fc(vars, domains, solution, lvl, matrix, fields):
             for constraint_position in new_dom:
                 if constraint_position == position:
                     continue
-                new_list = [item for item in new_dom[constraint_position] if is_consistent_assignment(fields[constraint_position], item, new_matrix)]
+                new_list = [item for item in new_dom[constraint_position] if is_consistent_assignment(
+                    fields[constraint_position], item, new_matrix)]
                 new_dom[constraint_position] = new_list
                 if len(new_list) == 0:
                     is_consistent = False
@@ -159,3 +149,8 @@ class ForwardChecking(Algorithm):
         fields = get_fields(variables, tiles)
         backtrack_fc(vars, domains, solution, 0, matrix, fields)
         return solution
+
+
+class ArcConsistency(Algorithm):
+    def get_algorithm_steps(self, tiles, variables, words):
+        pass
