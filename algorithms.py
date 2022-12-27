@@ -83,6 +83,55 @@ def backtrack(vars, domains, solution, lvl, matrix, fields):
     solution.append([position, None, domains])
     return False
 
+def get_all_arcs(graph):
+    pass
+
+def satisfies_constraint(val_x, val_y, x, y):
+    pass
+
+def are_constrained():
+    pass
+
+def arc_consistency(vars, domains, constraints):
+    arc_list = get_all_arcs(vars, domains, constraints)
+    while arc_list:
+        x, y = arc_list.pop(0)
+        x_vals_to_del = []
+        for val_x in domains[x]:
+            y_no_val = True
+            for val_y in domains[y]:
+                if satisfies_constraint(val_x, val_y, x, y, constraints):
+                    y_no_val = False
+                    break
+            if y_no_val:
+                x_vals_to_del.append(val_x)
+        if x_vals_to_del:
+            domains[x] = [v for v in domains[x] if v not in x_vals_to_del]
+            if not domains[x]:
+                return False
+            for v in vars:
+                if v != x and are_constrained(v, x, constraints):
+                    arc_list.append((v, x))
+    return True
+
+def backtrack_ac(vars, domains, solution, lvl, matrix, fields):
+    if lvl == len(vars):
+        return True
+    position = vars[lvl]
+    field = fields[position]
+    for idx, word in enumerate(domains[position]):
+        if is_consistent_assignment(field, word, matrix):
+            new_matrix = copy.deepcopy(matrix)
+            update_matrix(new_matrix, field, word)
+            solution.append([position, idx, domains])
+            new_dom = copy.deepcopy(domains)
+            if not arc_consistency(vars, new_dom, matrix, fields):
+                solution.append([position, None, domains])
+                continue            
+            if backtrack(vars, new_dom, solution, lvl+1, new_matrix, fields):
+                return True
+    solution.append([position, None, domains])
+    return False
 
 def backtrack_fc(vars, domains, solution, lvl, matrix, fields):
     if lvl == len(vars):
@@ -151,6 +200,18 @@ class ForwardChecking(Algorithm):
         return solution
 
 
+def create_graph(fields, tiles):
+    pass
+
+
 class ArcConsistency(Algorithm):
     def get_algorithm_steps(self, tiles, variables, words):
-        pass
+        matrix = [[0 for i in range(len(tiles[0]))] for i in range(len(tiles))]
+        solution = []
+        vars = [var for var in variables]
+        domains = {var: [word for word in words] for var in variables}
+        update_domains(domains, variables)
+        fields = get_fields(variables, tiles)
+        graph = create_graph(fields, tiles)
+        backtrack_ac(vars, domains, solution, 0, matrix, fields)
+        return solution
