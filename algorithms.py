@@ -83,17 +83,24 @@ def backtrack(vars, domains, solution, lvl, matrix, fields):
     solution.append([position, None, domains])
     return False
 
+
 def get_all_arcs(graph):
+
     pass
+
 
 def satisfies_constraint(val_x, val_y, x, y):
+
     pass
+
 
 def are_constrained():
+
     pass
 
-def arc_consistency(vars, domains, constraints):
-    arc_list = get_all_arcs(vars, domains, constraints)
+
+def arc_consistency(vars, domains, constraints, graph):
+    arc_list = get_all_arcs(graph)
     while arc_list:
         x, y = arc_list.pop(0)
         x_vals_to_del = []
@@ -114,7 +121,8 @@ def arc_consistency(vars, domains, constraints):
                     arc_list.append((v, x))
     return True
 
-def backtrack_ac(vars, domains, solution, lvl, matrix, fields):
+
+def backtrack_ac(vars, domains, solution, lvl, matrix, fields, graph):
     if lvl == len(vars):
         return True
     position = vars[lvl]
@@ -125,13 +133,14 @@ def backtrack_ac(vars, domains, solution, lvl, matrix, fields):
             update_matrix(new_matrix, field, word)
             solution.append([position, idx, domains])
             new_dom = copy.deepcopy(domains)
-            if not arc_consistency(vars, new_dom, matrix, fields):
+            if not arc_consistency(vars, new_dom, matrix, fields, graph):
                 solution.append([position, None, domains])
-                continue            
-            if backtrack(vars, new_dom, solution, lvl+1, new_matrix, fields):
+                continue
+            if backtrack_ac(vars, new_dom, solution, lvl+1, new_matrix, fields, graph):
                 return True
     solution.append([position, None, domains])
     return False
+
 
 def backtrack_fc(vars, domains, solution, lvl, matrix, fields):
     if lvl == len(vars):
@@ -200,8 +209,29 @@ class ForwardChecking(Algorithm):
         return solution
 
 
+def are_adjacent(field1, field2, tiles):
+    if field1.orientation == field2.orientation:
+        return False
+
+    x1, y1 = field1.x, field1.y
+    x2, y2 = field2.x, field2.y
+
+    if field1.orientation == 'h':
+        return x1 <= x2 <= x1 + field1.length and y2 <= y1 <= y2 + field2.length
+    else:
+        return x2 <= x1 <= x2 + field2.length and y1 <= y2 <= y1 + field1.length
+
+
 def create_graph(fields, tiles):
-    pass
+    graph = {}
+    for field in fields:
+        graph[field] = []
+        for second_field in fields:
+            if field == second_field:
+                continue
+            if are_adjacent(field, second_field, tiles):
+                graph[field].append(second_field)
+    return graph
 
 
 class ArcConsistency(Algorithm):
@@ -213,5 +243,7 @@ class ArcConsistency(Algorithm):
         update_domains(domains, variables)
         fields = get_fields(variables, tiles)
         graph = create_graph(fields, tiles)
-        backtrack_ac(vars, domains, solution, 0, matrix, fields)
+        for index in graph:
+            print(f"{index}: {graph[index]}")
+        # backtrack_ac(vars, domains, solution, 0, matrix, fields, graph)
         return solution
