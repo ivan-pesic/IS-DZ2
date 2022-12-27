@@ -85,21 +85,30 @@ def backtrack(vars, domains, solution, lvl, matrix, fields):
 
 
 def get_all_arcs(graph):
-
-    pass
-
-
-def satisfies_constraint(val_x, val_y, x, y):
-
-    pass
+    return [[key, x] for key in graph for x in graph[key]]
 
 
-def are_constrained():
+def get_intersection(pos1, pos2):
+    if pos1.orientation == 'h':
+        return pos2.y - pos1.y, pos1.x - pos2.x
+    else:
+        return pos2.x - pos1.x, pos1.y - pos2.y
 
-    pass
+
+def intersection_is_same_letter(word1, word2, pos1, pos2):
+    idx1, idx2 = get_intersection(pos1, pos2)
+    return word1[idx1] == word2[idx2]
 
 
-def arc_consistency(vars, domains, constraints, graph):
+def satisfies_constraint(val_x, val_y, x, y, matrix, fields):
+    return is_consistent_assignment(fields[x], val_x, matrix) and is_consistent_assignment(fields[y], val_y, matrix) and intersection_is_same_letter(val_x, val_y, fields[x], fields[y])
+
+
+def are_constrained(p1, p2, fields):
+    return are_adjacent(fields[p1], fields[p2])
+
+
+def arc_consistency(vars, domains, matrix, fields, graph):
     arc_list = get_all_arcs(graph)
     while arc_list:
         x, y = arc_list.pop(0)
@@ -107,7 +116,7 @@ def arc_consistency(vars, domains, constraints, graph):
         for val_x in domains[x]:
             y_no_val = True
             for val_y in domains[y]:
-                if satisfies_constraint(val_x, val_y, x, y, constraints):
+                if satisfies_constraint(val_x, val_y, x, y, matrix, fields):
                     y_no_val = False
                     break
             if y_no_val:
@@ -117,7 +126,7 @@ def arc_consistency(vars, domains, constraints, graph):
             if not domains[x]:
                 return False
             for v in vars:
-                if v != x and are_constrained(v, x, constraints):
+                if v != x and are_constrained(v, x, fields):
                     arc_list.append((v, x))
     return True
 
@@ -209,27 +218,29 @@ class ForwardChecking(Algorithm):
         return solution
 
 
-def are_adjacent(field1, field2, tiles):
+def are_adjacent(field1, field2):
     if field1.orientation == field2.orientation:
         return False
 
     x1, y1 = field1.x, field1.y
     x2, y2 = field2.x, field2.y
+    # print(f"{x1},{y1}: {field1.position}; {x2},{y2}: {field2.position}")
 
-    if field1.orientation == 'h':
-        return x1 <= x2 <= x1 + field1.length and y2 <= y1 <= y2 + field2.length
+    if field1.orientation == 'v':
+        return (x1 <= x2 < x1 + field1.length) and (y2 <= y1 < y2 + field2.length)
     else:
-        return x2 <= x1 <= x2 + field2.length and y1 <= y2 <= y1 + field1.length
+        return (x2 <= x1 < x2 + field2.length) and (y1 <= y2 < y1 + field1.length)
 
 
-def create_graph(fields, tiles):
+def create_graph(fields):
     graph = {}
     for field in fields:
         graph[field] = []
         for second_field in fields:
             if field == second_field:
                 continue
-            if are_adjacent(field, second_field, tiles):
+            # print(f"{fields[field]}, {fields[second_field]}")
+            if are_adjacent(fields[field], fields[second_field]):
                 graph[field].append(second_field)
     return graph
 
@@ -242,8 +253,8 @@ class ArcConsistency(Algorithm):
         domains = {var: [word for word in words] for var in variables}
         update_domains(domains, variables)
         fields = get_fields(variables, tiles)
-        graph = create_graph(fields, tiles)
-        for index in graph:
-            print(f"{index}: {graph[index]}")
-        # backtrack_ac(vars, domains, solution, 0, matrix, fields, graph)
+        # print(fields)
+        graph = create_graph(fields)
+        # print(get_all_arcs(graph))
+        backtrack_ac(vars, domains, solution, 0, matrix, fields, graph)
         return solution
