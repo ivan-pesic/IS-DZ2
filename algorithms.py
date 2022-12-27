@@ -131,6 +131,72 @@ def arc_consistency(vars, domains, matrix, fields, graph):
     return True
 
 
+def backtrack_fc_ac(vars, domains, solution, lvl, matrix, fields, graph):
+    if lvl == len(vars):
+        return True
+    position = vars[lvl]
+    field = fields[position]
+    for idx, word in enumerate(domains[position]):
+        is_consistent = True
+        if is_consistent_assignment(field, word, matrix):
+            new_matrix = copy.deepcopy(matrix)
+            update_matrix(new_matrix, field, word)
+            new_dom = copy.deepcopy(domains)
+            new_dom[position] = [word]
+            for constraint_position in new_dom:
+                if constraint_position == position:
+                    continue
+                new_list = [item for item in new_dom[constraint_position] if is_consistent_assignment(
+                    fields[constraint_position], item, new_matrix)]
+                new_dom[constraint_position] = new_list
+                if len(new_list) == 0:
+                    is_consistent = False
+                    break
+            if not is_consistent:
+                solution.append([position, 0, new_dom])
+                continue
+            if not arc_consistency(vars, new_dom, matrix, fields, graph):
+                solution.append([position, None, domains])
+                continue
+
+            solution.append([position, 0, new_dom])
+            if backtrack_fc(vars, new_dom, solution, lvl+1, new_matrix, fields):
+                return True
+    solution.append([position, None, domains])
+    return False
+
+
+def backtrack_fc_ac_2(vars, domains, solution, lvl, matrix, fields, graph):
+    if lvl == len(vars):
+        return True
+    position = vars[lvl]
+    field = fields[position]
+    for idx, word in enumerate(domains[position]):
+        is_consistent = True
+        if is_consistent_assignment(field, word, matrix):
+            solution.append([position, idx, domains])
+            new_matrix = copy.deepcopy(matrix)
+            update_matrix(new_matrix, field, word)
+            new_dom = copy.deepcopy(domains)
+            new_dom[position] = [word]
+            for var in vars:
+                if var != position and are_adjacent(fields[var], fields[position]):
+                    new_list = [item for item in new_dom[var] if is_consistent_assignment(
+                        fields[var], item, new_matrix)]
+                    new_dom[var] = new_list
+                    if len(new_list) == 0:
+                        is_consistent = False
+                        break
+            if not is_consistent:
+                continue
+            if not arc_consistency(vars, new_dom, matrix, fields, graph):
+                continue
+            if backtrack_fc_2(vars, new_dom, solution, lvl+1, new_matrix, fields):
+                return True
+    solution.append([position, None, domains])
+    return False
+
+
 def backtrack_ac(vars, domains, solution, lvl, matrix, fields, graph):
     if lvl == len(vars):
         return True
@@ -183,6 +249,39 @@ def backtrack_fc(vars, domains, solution, lvl, matrix, fields):
     return False
 
 
+def update_domain(domain, position, word, matrix):
+    pass
+
+
+def backtrack_fc_2(vars, domains, solution, lvl, matrix, fields):
+    if lvl == len(vars):
+        return True
+    position = vars[lvl]
+    field = fields[position]
+    for idx, word in enumerate(domains[position]):
+        is_consistent = True
+        if is_consistent_assignment(field, word, matrix):
+            solution.append([position, idx, domains])
+            new_matrix = copy.deepcopy(matrix)
+            update_matrix(new_matrix, field, word)
+            new_dom = copy.deepcopy(domains)
+            new_dom[position] = [word]
+            for var in vars:
+                if var != position and are_adjacent(fields[var], fields[position]):
+                    new_list = [item for item in new_dom[var] if is_consistent_assignment(
+                        fields[var], item, new_matrix)]
+                    new_dom[var] = new_list
+                    if len(new_list) == 0:
+                        is_consistent = False
+                        break
+            if not is_consistent:
+                continue
+            if backtrack_fc_2(vars, new_dom, solution, lvl+1, new_matrix, fields):
+                return True
+    solution.append([position, None, domains])
+    return False
+
+
 def get_fields(variables, tiles):
     vars = copy.deepcopy(variables)
     for var in variables:
@@ -207,14 +306,13 @@ class Backtracking(Algorithm):
 
 class ForwardChecking(Algorithm):
     def get_algorithm_steps(self, tiles, variables, words):
-
         matrix = [[0 for i in range(len(tiles[0]))] for i in range(len(tiles))]
         solution = []
         vars = [var for var in variables]
         domains = {var: [word for word in words] for var in variables}
         update_domains(domains, variables)
         fields = get_fields(variables, tiles)
-        backtrack_fc(vars, domains, solution, 0, matrix, fields)
+        backtrack_fc_2(vars, domains, solution, 0, matrix, fields)
         return solution
 
 
@@ -228,21 +326,12 @@ def are_adjacent(field1, field2):
 
     if field1.orientation == 'v':
         return (x1 <= x2 < x1 + field1.length) and (y2 <= y1 < y2 + field2.length)
-    else:
+    elif field1.orientation == 'h':
         return (x2 <= x1 < x2 + field2.length) and (y1 <= y2 < y1 + field1.length)
 
 
 def create_graph(fields):
-    graph = {}
-    for field in fields:
-        graph[field] = []
-        for second_field in fields:
-            if field == second_field:
-                continue
-            # print(f"{fields[field]}, {fields[second_field]}")
-            if are_adjacent(fields[field], fields[second_field]):
-                graph[field].append(second_field)
-    return graph
+    return {field: [second_field for second_field in fields if second_field != field and are_adjacent(fields[field], fields[second_field])] for field in fields}
 
 
 class ArcConsistency(Algorithm):
@@ -256,5 +345,6 @@ class ArcConsistency(Algorithm):
         # print(fields)
         graph = create_graph(fields)
         # print(get_all_arcs(graph))
-        backtrack_ac(vars, domains, solution, 0, matrix, fields, graph)
+        arc_consistency(vars, domains, matrix, fields, graph)
+        backtrack_fc_ac_2(vars, domains, solution, 0, matrix, fields, graph)
         return solution

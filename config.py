@@ -1,7 +1,7 @@
 import os
 
 # parameters
-HEIGHT = 676
+HEIGHT = 800
 WIDTH = 880
 SIDE_WIDTH = 240
 TILE_SIZE = 64
